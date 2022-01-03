@@ -451,8 +451,12 @@ $balloon.BalloonTipTitle = "Attention $Env:USERNAME"
 $balloon.Visible = $true 
 $balloon.ShowBalloonTip(5000)
 ```
-
+  
+# Pipe Output 
+powershell "node server.js 2>&1 | tee log.txt"
+  
 # Add to Path, environment path
+  
   
 ## Temporarily
 ```bat
