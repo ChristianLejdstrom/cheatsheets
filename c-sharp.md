@@ -3,8 +3,10 @@
 <!--ts-->
 * [C#](c-sharp.md#c)
    * [HTTP Client](c-sharp.md#http-client)
+      * [Print response](c-sharp.md#print-response)
+   * [Regex](c-sharp.md#regex)
 
-<!-- Added by: runner, at: Wed Dec 29 11:29:06 UTC 2021 -->
+<!-- Added by: runner, at: Fri Jan 14 15:08:15 UTC 2022 -->
 
 <!--te-->
 
@@ -132,4 +134,17 @@ namespace HttpUtils
         }
     }
 }
+```
+
+### Print response
+```csharp
+var response = await client.PostAsync(createQueryRequest, content);
+await _logger.LogInformationAsync(response.Content.ReadAsStringAsync().Result);
+```
+
+## Regex
+```csharp
+using System.Text.RegularExpressions;
+var matches = Regex.Matches("MyStr12", @"\d+");
+Regex.Matches("MyStr12", @"\d+").Count > 0
 ```

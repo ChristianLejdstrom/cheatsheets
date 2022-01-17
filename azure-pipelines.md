@@ -6,6 +6,7 @@
 * [Variables](azure-pipelines.md#variables)
    * [Using variable groups](azure-pipelines.md#using-variable-groups)
    * [Useful environment variables](azure-pipelines.md#useful-environment-variables)
+   * [Check if a variable is set (not null)](azure-pipelines.md#check-if-a-variable-is-set-not-null)
 * [Triggers](azure-pipelines.md#triggers)
    * [Trigger on push to another repo](azure-pipelines.md#trigger-on-push-to-another-repo)
 * [Resources](azure-pipelines.md#resources)
@@ -32,6 +33,8 @@
 * [Windows Machine File Copy](azure-pipelines.md#windows-machine-file-copy)
    * [Troubleshooting](azure-pipelines.md#troubleshooting)
       * [Same files skipped](azure-pipelines.md#same-files-skipped)
+* [Replace tokens, tokenize](azure-pipelines.md#replace-tokens-tokenize)
+   * [Replace tokens using parameters](azure-pipelines.md#replace-tokens-using-parameters)
 * [Visual Studio build](azure-pipelines.md#visual-studio-build)
    * [Publish artifact as a .zip or files](azure-pipelines.md#publish-artifact-as-a-zip-or-files)
 * [git](azure-pipelines.md#git)
@@ -47,7 +50,7 @@
    * [Connection string is replace by $(ReplacableToken...)" in web.config](azure-pipelines.md#connection-string-is-replace-by-replacabletoken-in-webconfig)
    * ["ERR:unable to get local issuer certificate" for NuGet tools installer](azure-pipelines.md#errunable-to-get-local-issuer-certificate-for-nuget-tools-installer)
 
-<!-- Added by: runner, at: Wed Dec 29 11:29:06 UTC 2021 -->
+<!-- Added by: runner, at: Fri Jan 14 15:08:14 UTC 2022 -->
 
 <!--te-->
 
@@ -80,6 +83,19 @@ variables:
 - **Build.ArtifactStagingDirectory**: The local path on the agent where any artifacts are copied to before being pushed to their destination. 
 
 More: https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml
+
+## Check if a variable is set (not null)
+```yaml
+  - task: PowerShell@2
+    displayName: "Check for access tokens"
+    inputs:
+      targetType: 'inline'
+      script: |
+        Write-Error "Source access token is not defined. Please define the secret runtime variable PATsource"
+    condition: eq(variables['PATsource'], '')
+```
+
+Does not work for secret variables!
 
 # Triggers
 ```yaml
@@ -341,6 +357,31 @@ Uses robocopy, argument list: [Link](https://docs.microsoft.com/en-us/windows-se
 ### Same files skipped
 By default, Robocopy skips copying existing files if the specific metadata (file size, timestamp, file name) of the files match.
 Override this with the `\IS` (Include same) argument.
+
+# Replace tokens, tokenize
+
+## Replace tokens using parameters
+```yaml
+- task: PowerShell@2
+  inputs:
+    targetType: 'inline'
+    script: |
+      Write-Host "##vso[task.setvariable variable=accessTokenSource]${{parameters.accessTokenSource}}"
+      Write-Host "##vso[task.setvariable variable=accessTokenTarget]${{parameters.accessTokenTarget}}"
+- task: replacetokens@4
+  inputs:
+    rootDirectory: './DevOps-as-a-Service-Migration-configs/'
+    targetFiles: '${{parameters.configfilepath}}'
+    encoding: 'auto'
+    tokenPattern: 'default'
+    writeBOM: true
+    actionOnMissing: 'warn'
+    keepToken: false
+    actionOnNoFiles: 'continue'
+    enableTransforms: false
+    useLegacyPattern: false
+    enableTelemetry: true
+```
 
 # Visual Studio build
 

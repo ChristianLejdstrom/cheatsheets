@@ -5,6 +5,8 @@
    * [help](powershell.md#help-1)
    * [version](powershell.md#version)
    * [gcm](powershell.md#gcm)
+* [IO, I/O](powershell.md#io-io)
+   * [Write to console and pipe to log file at the same time](powershell.md#write-to-console-and-pipe-to-log-file-at-the-same-time)
 * [Modules](powershell.md#modules)
    * [Import modules from another file](powershell.md#import-modules-from-another-file)
 * [File](powershell.md#file)
@@ -67,7 +69,7 @@
 * [WSL](powershell.md#wsl)
    * [Mount drive in WSL](powershell.md#mount-drive-in-wsl)
 
-<!-- Added by: runner, at: Wed Dec 29 11:29:12 UTC 2021 -->
+<!-- Added by: runner, at: Fri Jan 14 15:08:21 UTC 2022 -->
 
 <!--te-->
 
@@ -100,6 +102,13 @@ Or
 
 ```bat
 gcm *Copy-*
+```
+
+# IO, I/O
+
+## Write to console and pipe to log file at the same time
+```bat
+"hello" 2>&1 | tee log.txt
 ```
 
 # Modules

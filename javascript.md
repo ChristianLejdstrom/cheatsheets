@@ -20,6 +20,9 @@
       * [Iterating key/value pairs](javascript.md#iterating-keyvalue-pairs)
       * [Dictionary length (length of dictionary)](javascript.md#dictionary-length-length-of-dictionary)
    * [Does key exist in dictionary?](javascript.md#does-key-exist-in-dictionary)
+   * [Dates, moments](javascript.md#dates-moments)
+      * [Date mathematics](javascript.md#date-mathematics)
+         * [Different between two Dates in days](javascript.md#different-between-two-dates-in-days)
    * [Program logic](javascript.md#program-logic)
       * [for loop](javascript.md#for-loop)
       * [if/else](javascript.md#ifelse)
@@ -58,7 +61,7 @@
 * [Url](javascript.md#url)
    * [Encode/decode url](javascript.md#encodedecode-url)
 
-<!-- Added by: runner, at: Wed Dec 29 11:29:09 UTC 2021 -->
+<!-- Added by: runner, at: Fri Jan 14 15:08:18 UTC 2022 -->
 
 <!--te-->
 
@@ -206,6 +209,16 @@ Object.keys(dictionary).length
 ```typescript
 if ("key1" in obj)
     console.log("has key1 in obj");
+```
+
+## Dates, moments
+
+### Date mathematics
+
+#### Different between two Dates in days
+```typescript
+var diff = licenseEndDate.getTime() - today.getTime();   
+var daydiff = diff / (1000 * 60 * 60 * 24);
 ```
 
 ## Program logic
