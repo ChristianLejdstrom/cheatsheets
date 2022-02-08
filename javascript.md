@@ -42,6 +42,8 @@
       * [await, then](javascript.md#await-then)
       * [Promise.all: wait for several threads to finish](javascript.md#promiseall-wait-for-several-threads-to-finish)
          * [Use Promise.All to aggregate data from multiple promises](javascript.md#use-promiseall-to-aggregate-data-from-multiple-promises)
+   * [Scope](javascript.md#scope)
+      * [Use methods from the outer object when the scope of "this" changes](javascript.md#use-methods-from-the-outer-object-when-the-scope-of-this-changes)
    * [HTML components](javascript.md#html-components)
       * [React.Component](javascript.md#reactcomponent)
          * [render method](javascript.md#render-method)
@@ -61,7 +63,7 @@
 * [Url](javascript.md#url)
    * [Encode/decode url](javascript.md#encodedecode-url)
 
-<!-- Added by: runner, at: Fri Jan 14 15:08:18 UTC 2022 -->
+<!-- Added by: runner, at: Sun Feb  6 08:58:47 UTC 2022 -->
 
 <!--te-->
 
@@ -392,6 +394,23 @@ for (let i = 0; i < workItems.length; i++) {
     workItemsOut.push(...wis);
 }
 return workItemsOut;
+```
+
+## Scope
+
+### Use methods from the outer object when the scope of "this" changes
+
+```typescript
+let checkbox = document.createElement('input') as HTMLInputElement;
+const oc: OuterClass = this;
+
+checkbox.addEventListener(
+    "change",
+    function() {
+        oc.doStuff();
+    },
+    false
+);
 ```
 
 ## HTML components

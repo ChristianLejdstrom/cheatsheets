@@ -5,8 +5,18 @@
    * [HTTP Client](c-sharp.md#http-client)
       * [Print response](c-sharp.md#print-response)
    * [Regex](c-sharp.md#regex)
+   * [Newtonsoft.json](c-sharp.md#newtonsoftjson)
+      * [Get string value from a JToken](c-sharp.md#get-string-value-from-a-jtoken)
+      * [Replace a json token](c-sharp.md#replace-a-json-token)
+   * [async](c-sharp.md#async)
+      * [async WhenAll, await multiple async calls](c-sharp.md#async-whenall-await-multiple-async-calls)
+   * [LibGit2Sharp](c-sharp.md#libgit2sharp)
+      * [Create credentials](c-sharp.md#create-credentials)
+      * [Clone a repository](c-sharp.md#clone-a-repository)
+      * [Pull a repository](c-sharp.md#pull-a-repository)
+      * [Pull feature branches](c-sharp.md#pull-feature-branches)
 
-<!-- Added by: runner, at: Fri Jan 14 15:08:15 UTC 2022 -->
+<!-- Added by: runner, at: Sun Feb  6 08:58:45 UTC 2022 -->
 
 <!--te-->
 
@@ -147,4 +157,132 @@ await _logger.LogInformationAsync(response.Content.ReadAsStringAsync().Result);
 using System.Text.RegularExpressions;
 var matches = Regex.Matches("MyStr12", @"\d+");
 Regex.Matches("MyStr12", @"\d+").Count > 0
+```
+
+## Newtonsoft.json
+
+### Get string value from a JToken
+```csharp
+string name = jToken["name"];
+```
+
+### Replace a json token
+```csharp
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+
+JToken idToken = definitionJObject.SelectToken("variableGroupProjectReferences[0].projectReference.id");
+idToken.Replace(project.Id);
+```
+
+## async
+
+### async WhenAll, await multiple async calls
+```csharp
+await Task.WhenAll(items.Select(item => ProcessItem(wi)));
+```
+
+## LibGit2Sharp
+
+### Create credentials
+```csharp
+private CredentialsHandler CreateCredentialsHandler(CredentialsDto credentials)
+    => (url, usernameFromUrl, types) =>
+        new UsernamePasswordCredentials()
+        {
+            Username = credentials.Username,
+            Password = credentials.Password
+        };
+```
+
+### Clone a repository
+```csharp
+
+var path = "C:\path\to\repo"
+var url = "https:\\path.to.repo"
+
+var credentialsHandler =
+    CreateCredentialsHandler(credentials);
+
+var cloneOptions = new CloneOptions
+{
+    CredentialsProvider = credentialsHandler,
+    FetchOptions = new FetchOptions { TagFetchMode = TagFetchMode.All }
+};
+
+Repository.Clone(url, path, cloneOptions);
+```
+
+### Pull a repository
+```csharp
+public void PullRepository(string path, CredentialsDto credentials)
+{
+    try
+    {
+        var credentialsHandler =
+            CreateCredentialsHandler(credentials);
+
+        var options = new PullOptions
+        {
+            FetchOptions = new FetchOptions { CredentialsProvider = credentialsHandler, TagFetchMode = TagFetchMode.All }
+        };
+        using (var repo = new Repository(path))
+        {
+            var signature = new Signature(
+                new Identity(name: credentials.Username, email: credentials.Username), DateTimeOffset.Now);
+
+            Commands.Pull(repo, signature, options);
+        }
+
+    }
+    catch (Exception e)
+    {
+        _logger.LogError($"Failed to pull latest changes with message: {e.Message}");
+        throw;
+    }
+}
+```
+
+### Pull feature branches
+```csharp
+private void PullFeatureBranches(Repository repo, CredentialsDto credentials)
+{
+    var credentialsHandler =
+        CreateCredentialsHandler(credentials);
+    var options = new PullOptions
+    {
+        FetchOptions = new FetchOptions { CredentialsProvider = credentialsHandler, TagFetchMode = TagFetchMode.All }
+    };
+    var signature = new Signature(
+        new Identity(name: credentials.Username, email: credentials.Username), DateTimeOffset.Now);
+
+    Remote remote = repo.Network.Remotes["origin"];
+
+    List<string> existingBranches = new List<string>();
+    foreach (var branch in repo.Branches)
+    {
+        if (branch.CanonicalName.StartsWith("refs/heads/"))
+        {
+            existingBranches.Add(branch.CanonicalName.Replace("refs/heads/", ""));
+        }
+    }
+    foreach (var branch in repo.Branches)
+    {
+        string shortName = branch.CanonicalName.Replace("refs/remotes/origin/", "");
+        if (branch.CanonicalName.StartsWith("refs/remotes/origin/") && !existingBranches.Contains(shortName))
+        {
+            var localBranch = repo.Branches.Add(shortName, branch.Commits.Last());
+            repo.Branches.Update(localBranch,
+                b => b.Remote = remote.Name,
+                b => b.UpstreamBranch = localBranch.CanonicalName);
+
+            Commands.Checkout(repo, shortName);
+            Commands.Pull(repo, signature, options);
+            _logger.LogInformation("Pulled remote branch: " + branch.CanonicalName);
+        }
+    }
+    // Finally, checkout main branch
+    if(existingBranches.Count > 0)
+        Commands.Checkout(repo, existingBranches.Last());
+}
 ```

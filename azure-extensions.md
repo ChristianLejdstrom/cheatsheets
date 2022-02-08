@@ -14,12 +14,15 @@
    * [Custom work item fields](azure-extensions.md#custom-work-item-fields)
    * [Acess Rest API from react](azure-extensions.md#acess-rest-api-from-react)
 * [Create hubs](azure-extensions.md#create-hubs)
+* [Local testing](azure-extensions.md#local-testing)
+   * [Testing node pipeline tasks in Visual Studio](azure-extensions.md#testing-node-pipeline-tasks-in-visual-studio)
+   * [Testing widgets and work item forms with webpack serve](azure-extensions.md#testing-widgets-and-work-item-forms-with-webpack-serve)
 * [Troubleshooting](azure-extensions.md#troubleshooting)
    * [The extension '' doesn't contain the requested asset type 'XXX.xxx'](azure-extensions.md#the-extension--doesnt-contain-the-requested-asset-type-xxxxxx)
    * [Refused to apply style because its MIME type ('application/json') is not a supported](azure-extensions.md#refused-to-apply-style-because-its-mime-type-applicationjson-is-not-a-supported)
    * [Uncaught ReferenceError: VSS is not defined](azure-extensions.md#uncaught-referenceerror-vss-is-not-defined)
 
-<!-- Added by: runner, at: Fri Jan 14 15:08:14 UTC 2022 -->
+<!-- Added by: runner, at: Sun Feb  6 08:58:43 UTC 2022 -->
 
 <!--te-->
 
@@ -140,6 +143,153 @@ https://docs.microsoft.com/en-us/azure/devops/extend/get-started/node?view=azure
 You can use different targets to put the hub in different places, e.g.:
 **"ms.vss-code-web.code-hub-group"** for Repos, and
 **"ms.vss-web.collection-admin-hub-group"** for collection settings
+
+# Local testing
+
+## Testing node pipeline tasks in Visual Studio
+
+Node tasks can be debugged locally by invoking them with npm and supplying the environment variables.
+
+In VS Code, you can set up the following debug configuration:
+
+**.vscode/launch.json**:
+```json
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Launch Program",
+            "env": {
+                "INPUT_parameter_boolean": "false",
+                "INPUT_parameter_string": "mystr",
+                "INPUT_parameter_num": 12345,
+                "SYSTEM_DEFAULTWORKINGDIRECTORY": "C:\\ProjectFolder",
+                "SYSTEM_TEAMPROJECT": "testproject",
+                "SYSTEM_TEAMFOUNDATIONCOLLECTIONURI": "https://dev.azure.com/solidify/",
+                "SYSTEM_ACCESSTOKEN": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+            },
+            "program": "${workspaceFolder}/dist/index.js",
+            "outFiles": [
+                "${workspaceFolder}/**/*js"
+            ]
+        }
+    ]
+}
+```
+
+
+**.vscode/tasks.json**:
+```json
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+         {
+             "type": "typescript",
+             "tsconfig": "src/importTestresultsTask/tsconfig.json",
+             "problemMatcher": [
+                 "$tsc"
+             ],
+            "group": "build"
+         }
+    ]
+}
+```
+
+## Testing widgets and work item forms with webpack serve
+
+With webpack you may build a local version of your extension that you can inject into the relevant html form elements of your Azure DevOps organization.
+
+First create an overrides JSON file with the following content for your dev build in **configs/dev.json**:
+```json
+{
+  "id": "[extension-id]-dev",
+  "public": false,
+  "baseUri": "https://localhost:3000"
+}
+```
+And an overrides JSON file for the release build called **configs/release.json**:
+```json
+{
+  "id": "[extension-id]",
+  "public": true
+}
+```
+
+Your **webpack.config.js** should contain the output (dist) directory and information about the devServer:
+```javascript
+module.exports = {
+  devtool: "inline-source-map",
+  devServer: {
+    https: true,
+    port: 3000
+  },
+  output: {
+    publicPath: "/dist/"
+    // ...
+  }
+  // ...
+};
+```
+
+Additionally, in order to make webpack copy HTML files from the src folder to the dist folder, you need to add the copy-webpack-plugin npm package to your project, and then add the following lines to your **webpack.config.json** file. These changes will configure webpack to copy all HTML files from src:
+```javascript
+const CopyWebpackPlugin = require("copy-webpack-plugin");
+// ...
+
+module.exports = {
+  plugins: [new CopyWebpackPlugin([{ from: "**/*.html", context: "src" }])],
+  // ...
+};
+```
+
+If you want a debug configuration in VS Code that serves the extension instead, you can use the following **.vscode/launch.json**:
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch Firefox",
+      "type": "firefox",
+      "request": "launch",
+      "url": "https://localhost:3000/",
+      "reAttach": true,
+      "pathMappings": [
+        {
+          "url": "webpack:///",
+          "path": "${workspaceFolder}/"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Your **package.json** should contain the following scripts for compiling the dev version of your extension:
+```json
+"clean": "rimraf ./dist ./out",
+"compile:dev": "npm run clean && webpack --mode development",
+"build": "npm run compile",
+"build:dev": "npm run compile:dev",
+"package-extension:dev": "npm run compile:dev && tfx extension create --overrides-file configs/dev.json --manifest-globs vss-extension.json",
+"package-extension:prod": "npm run compile && tfx extension create --overrides-file configs/release.json --manifest-globs vss-extension.json",
+"publish-extension": "tfx extension publish --manifest-globs vss-extension.json",
+"start:dev": "webpack serve --mode development",
+```
+
+Now we need to do the following steps:
+- Compile your dev extension vsix with `npm run package:dev`
+- Publish the extension, either manually through the Manage Extensions portal or with `npm run publish-extension`
+- Share your dev extension with your AzDO organization.
+- Run your dev extension with `npm run start:dev`. This should open a terminal saying your extension is being served from https://localhost:3000. The extension will be continously built and served as long as this console is open, allowing you to edit the code and view the results without republishing.
+- Now you will need to navigate to https://localhost:3000 in a web browser and click past the security warning, telling the browser to trust localhost:3000. Otherwise the injected html forms will not render.
+- Now navigate to your AzDO organization and install the extension. Then do any neccessary configuration on your dasboard/process templates/etc and you are done.
 
 # Troubleshooting
 

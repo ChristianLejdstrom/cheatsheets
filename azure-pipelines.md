@@ -41,6 +41,8 @@
    * [Expose access token to a git command in powershell](azure-pipelines.md#expose-access-token-to-a-git-command-in-powershell)
 * [Agent setup](azure-pipelines.md#agent-setup)
    * [Must not run as sudo](azure-pipelines.md#must-not-run-as-sudo)
+* [Set up a nuget feed and push packages](azure-pipelines.md#set-up-a-nuget-feed-and-push-packages)
+* [Replace tokens manually, without the Replace Tokens task](azure-pipelines.md#replace-tokens-manually-without-the-replace-tokens-task)
 * [Troubleshooting](azure-pipelines.md#troubleshooting-1)
    * [SYSTEM_ACCESSTOKEN env var not set](azure-pipelines.md#system_accesstoken-env-var-not-set)
    * [The reference assemblies for .NETFramework,Version=v4.8 were not found](azure-pipelines.md#the-reference-assemblies-for-netframeworkversionv48-were-not-found)
@@ -49,8 +51,9 @@
    * [command not found](azure-pipelines.md#command-not-found)
    * [Connection string is replace by $(ReplacableToken...)" in web.config](azure-pipelines.md#connection-string-is-replace-by-replacabletoken-in-webconfig)
    * ["ERR:unable to get local issuer certificate" for NuGet tools installer](azure-pipelines.md#errunable-to-get-local-issuer-certificate-for-nuget-tools-installer)
+   * [Error MSB3249: Application Configuration file "App.config" is invalid. ".", hexadecimal value 0x00, is an invalid character. Line 2, position 1.](azure-pipelines.md#error-msb3249-application-configuration-file-appconfig-is-invalid--hexadecimal-value-0x00-is-an-invalid-character-line-2-position-1)
 
-<!-- Added by: runner, at: Fri Jan 14 15:08:14 UTC 2022 -->
+<!-- Added by: runner, at: Sun Feb  6 08:58:43 UTC 2022 -->
 
 <!--te-->
 
@@ -422,6 +425,70 @@ do:
 export AGENT_ALLOW_RUNASROOT="1"
 ```
 
+# Set up a nuget feed and push packages
+
+To be used if the customer needs to build a package, but the TFS server does not have access to the public NuGet registry.
+
+Create a new NuGet feed
+
+Add it to the NuGet.config (in the same folder as the .sln):
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="LocalPackages" value="packages" />
+    <add key="TopDeskIntegration" value="https://tfs.dd.dll.se/DefaultCollection/Microsoft_BI/_packaging/TopDeskIntegration/nuget/v3/index.json" />
+  </packageSources>
+</configuration>
+```
+
+Then do the following to push:
+
+```pwsh
+dotnet nuget push --source "TopDeskIntegration" --api-key az .\packages\Newtonsoft.Json.10.0.3\Newtonsoft.Json.10.0.3.nupkg
+```
+
+To push all packages in one folder:
+
+```pwsh
+dotnet nuget push --source "TopDeskIntegration_Packages" --api-key az .\packages\**\*.nupkg
+```
+
+In the build pipeline:
+```yaml
+- task: NuGetInstaller@0
+  diaplayName: 'NuGet restore azuredevop/projectname"
+  inputs:
+    solution: 'solution.sln'
+    nugetConfigPath: 'nuget.config'
+    restoreMode: 'restore'
+    nugetVersion: '4.0.0.2283'
+
+- task: VSBuild@1
+  inputs:
+    solution: 'solution.sln'
+    vsVersion: '15.0'
+    configuration: 'Release'
+    msbuildArchitecture: 'x64'
+```
+
+# Replace tokens manually, without the Replace Tokens task
+
+Put this file in .azure-pipelines: https://gist.github.com/niclaslindstedt/8425dbc5db81b779f3f46659f7232f91
+
+the pipeline:
+```yaml
+- task: PowerShell@2
+  displayName: "Replace tokens in app.config"
+  inputs:
+    targetType: 'inline*
+    script: |
+      . .\.azure-pipelines\replace-tokens.ps1
+      Replace-Tokens -InputFile app.Release.config -OutputFile app.config -Tokens @(tokenA="$(tokenA)"; tokenB="$(tokenB)";} -StartTokenPattern "{{" -EndTokenPattern "}}"
+```
+
 # Troubleshooting
 
 ## SYSTEM_ACCESSTOKEN env var not set
@@ -460,3 +527,12 @@ Add `/p:AutoParameterizationWebConfigConnectionStrings=false` in the MSBuild arg
 Try to set the NODE.EXTRA.CA.CERTS variable to the path of the certificate (e.g. C:\opt\node-extra-ca-certs\dll-certs.cer)
 
 If that does not work, install the nuget CLI on the build machine and use that.
+
+## Error MSB3249: Application Configuration file "App.config" is invalid. ".", hexadecimal value 0x00, is an invalid character. Line 2, position 1.
+
+File is in UTF16 encoding when it should be in UTF16.
+
+Powershell:
+```pwsh
+XXX | Out-File -FilePath $InputFile -Encoding UTF8
+```
